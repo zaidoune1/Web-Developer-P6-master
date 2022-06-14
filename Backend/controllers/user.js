@@ -1,10 +1,50 @@
 const bcrypt = require('bcrypt') // J'importe le package bcrypt permettant de hasher les mots de passe
 const jwt = require('jsonwebtoken') // J'importe le package jwt
-
 const User = require('../models/User'); // J'importe le model User
+const emailValidator = require("email-validator");
+const passwordValidator = require('password-validator');// création d'un mot de passe fort // OWASP
+var passwordSchema = new passwordValidator()
 
+passwordSchema
+.is().min(8)                                    
+.is().max(20)                                  
+.has().uppercase()                              
+.has().lowercase()                              
+.has().digits()                                
+.has().not().spaces()                           
+.is().not().oneOf(['Passw0rd', 'Password123', 'motdepasse']); 
+
+// inscription de l'utilisateur et cryptage du password
 exports.signup = (req, res, next) => { // CREATION D'UN NOUVEAU USER
-    bcrypt.hash(req.body.password, 10) // Je récupére Le mots de passe renseigné depuis le front-end qui sera hasher ('l'algorythme de hashage est executé 10 fois (salt)')
+    if ((!emailValidator.validate(req.body.email)) && (!passwordSchema.validate(req.body.password))) 
+     {
+        res.writeHead(400,
+            'Vérifiez le format de Votre e-mail et le format de votre mot de passe : Celui-ci doit comporter au moins 8 caractères, des majuscules, des minuscules et des chiffres',
+            {
+            'content-type': 'application/json'
+            });
+            res.end('Error:Vérifiez le format de Votre e-mail et le format de votre mot de passe : Celui-ci doit comporter au moins 8 caractères, des majuscules, des minuscules et des chiffres'
+           );
+      }
+      else if (!emailValidator.validate(req.body.email)) {
+        res.writeHead(400,
+            'Vérifiez le format de votre adresse e-mail',
+            {
+            'content-type': 'application/json'
+        });
+        res.end('Error:Vérifiez le format de votre adresse e-mail ou Votre mot de passe : Celui-ci doit comporter au moins 8 caractères, des majuscules, des minuscules et des chiffres');
+      } 
+      else if (!passwordSchema.validate(req.body.password)) {
+        res.writeHead(400,
+            'Vérifiez le format de Votre mot de passe : Celui-ci doit comporter au moins 8 caractères, des majuscules, des minuscules et des chiffres',
+            {
+            'content-type': 'application/json'
+        });
+       res.end('Error:Vérifiez le format de Votre mot de passe : Celui-ci doit comporter au moins 8 caractères, des majuscules, des minuscules et des chiffres');
+      } 
+      
+      else if (emailValidator.validate(req.body.email) || passwordSchema.validate(req.body.password)) {
+          bcrypt.hash(req.body.password, 10) // Je récupére Le mots de passe renseigné depuis le front-end qui sera hasher ('l'algorythme de hashage est executé 10 fois (salt)')
         .then(hash => { // je récupére le hash du mots de passe
             const user = new User({ // Je crée un nouvelle utilisateur à l'aide du schéma 
                 email: req.body.email, // Je récupére l'e-mail dans le corp de la requête
@@ -16,13 +56,14 @@ exports.signup = (req, res, next) => { // CREATION D'UN NOUVEAU USER
         })
         .catch(error => res.status(500).json({ error })); // Je renvoie une erreur
 };
-
+};
 exports.login = (req, res, next) => { // CONNEXION D'UN UTILISATEUR
     User.findOne({ email: req.body.email }) /* Je récupére l'utilisateur correspondant à 
                                             l'e-mail renseigné dans le corp de la requête */
         .then(user => {
             if (!user) { // Si l'e-mail ne correspond à aucun utilisateur
-                return res.status(401).json({ error: 'Utilisateur non trouvé !' }); // Je retourne une erreur 401 ainsi qu'un message d'erreur
+               // return res.status(401).json({ error: 'Utilisateur non trouvé !' }); // Je retourne une erreur 401 ainsi qu'un message d'erreur
+            
             }
             bcrypt.compare(req.body.password, user.password) /* Si l'e-mail correspond à un utilisateur je compare le mots de passe envoyer dans la requête avec le hash 
                                                         déjà présent dans la base à l'aide de la fonction compare de bcrypt */
