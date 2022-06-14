@@ -2,17 +2,8 @@ const bcrypt = require('bcrypt') // J'importe le package bcrypt permettant de ha
 const jwt = require('jsonwebtoken') // J'importe le package jwt
 const User = require('../models/User'); // J'importe le model User
 const emailValidator = require("email-validator");
-const passwordValidator = require('password-validator');// création d'un mot de passe fort // OWASP
-var passwordSchema = new passwordValidator()
+const passwordSchema = require('../models/password');
 
-passwordSchema
-.is().min(8)                                    
-.is().max(20)                                  
-.has().uppercase()                              
-.has().lowercase()                              
-.has().digits()                                
-.has().not().spaces()                           
-.is().not().oneOf(['Passw0rd', 'Password123', 'motdepasse']); 
 
 // inscription de l'utilisateur et cryptage du password
 exports.signup = (req, res, next) => { // CREATION D'UN NOUVEAU USER
